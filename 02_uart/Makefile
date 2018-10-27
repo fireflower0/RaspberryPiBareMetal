@@ -15,7 +15,7 @@ $(TARGET).elf: $(OBJS)
 	$(CROSS)as -o $@ $<
 
 .c.o:
-	$(CROSS)gcc $(CFLAGS) -o $@ $<
+	$(CROSS)gcc -fno-stack-protector $(CFLAGS) -o $@ $<
 
 clean:
 	rm -f *~ *.o *.elf *.img *.map
