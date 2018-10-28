@@ -5,7 +5,7 @@
 * Start Address
   * 80000 => 0x40080000
 * Qem monitor
-  * Command "Ctrl + Alt + 1"
+  * Command "Ctrl + Alt + 2"
 
 ```
 qemu-system-aarch64 -cpu cortex-a57 -M virt -kernel kernel8.img
