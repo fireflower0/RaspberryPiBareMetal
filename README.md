@@ -6,6 +6,5 @@
 * qemu-system-aarch64
 
 ```
-qemu-system-aarch64 -m 128 -M raspi3 -kernel kernel.elf
+qemu-system-aarch64 -m 128 -M raspi3 -kernel kernel8.img 
 ```
-
