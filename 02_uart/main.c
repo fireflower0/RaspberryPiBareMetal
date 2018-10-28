@@ -1,12 +1,26 @@
 #include <stdint.h>
 
-#define UARTDR      (*(volatile unsigned int *)0x09000000)
-#define UARTFR      (*(volatile unsigned int *)0x09000018)
+#define UARTDR      0x09000000
+#define UARTFR      0x09000018
 #define UARTFR_TXFF (1U << 5)
 
+///
+// Memory Mapped I/O
+
+void mmio_write(intptr_t reg, uint32_t data){
+    *(volatile uint32_t *)reg = data;
+}
+
+uint32_t mmio_read(intptr_t reg){
+    return *(volatile uint32_t *)reg;
+}
+
+///
+// UART
+
 void put_char(char ch){
-    while(UARTFR & UARTFR_TXFF);
-    UARTDR = (unsigned int)ch;
+    while(mmio_read(UARTFR) & UARTFR_TXFF);
+    mmio_write(UARTDR, (uint32_t)ch);
 }
 
 void put_str(char *str){
@@ -38,6 +52,9 @@ void put_hex(uint64_t num){
 
     put_str(buf);
 }
+
+///
+// Main Function
 
 int main(void){
     put_str("Hello, world!\n");
