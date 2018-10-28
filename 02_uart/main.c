@@ -38,6 +38,10 @@ void put_hex(uint64_t num){
     *bf++ = '0';
     *bf++ = 'x';
 
+    while(num / d >= base){
+        d *= base;
+    }
+
     while(d != 0){
         int dgt = num / d;
         num %= d;
@@ -47,6 +51,7 @@ void put_hex(uint64_t num){
             ++n;
         }
     }
+    *bf++ = '\r';
     *bf++ = '\n';
     *bf = 0;
 
@@ -57,7 +62,7 @@ void put_hex(uint64_t num){
 // Main Function
 
 int main(void){
-    put_str("Hello, world!\n");
+    put_str("Hello, world!\r\n");
     put_hex(10);
 
     while(1)
