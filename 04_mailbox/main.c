@@ -72,8 +72,8 @@ void fb_init() {
 
     put_str("Writing Mailbox.\r\n");
 
-    //mbox_write(8, (uint32_t)message + 0x40000000);
-    mbox_write(8, (intptr_t)message);
+    mbox_write(8, (intptr_t)message + 0x40000000);
+    //mbox_write(8, (intptr_t)message);
 
     put_str("done.\r\n");
 
