@@ -9,6 +9,16 @@ Insert the following files into FAT32 format microSD card.
 * config.txt : Write by yourself
 * kernel8.img : Apps you created
 
+```
+# Example of config.txt
+
+# ARMコアをAArch64で起動させる
+arm_control=0x200
+
+# Enable UART
+enable_uart=1
+```
+
 ## Compiler
 
 Linaro's GCC for AArch 64 Bare-Metal  
