@@ -1,5 +1,20 @@
 # RaspberryPiBareMetal
 
+## Files to prepare
+
+Insert the following files into FAT32 format microSD card.  
+
+* [bootcode.bin](https://github.com/raspberrypi/firmware/blob/master/boot/bootcode.bin)
+* [start.elf](https://github.com/raspberrypi/firmware/blob/master/boot/start.elf)
+* config.txt : Write by yourself
+* kernel8.img : Apps you created
+
+## Compiler
+
+Linaro's GCC for AArch 64 Bare-Metal  
+
+[linaro(downloads)](https://www.linaro.org/downloads/)  
+
 ## Qemu
 
 * Qemu 2.12.1
