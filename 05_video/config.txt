@@ -1,0 +1,9 @@
+# ARMコアをAArch64で起動させる
+arm_control=0x200
+
+disable_commandline_tags=1
+
+# Enable UART
+enable_uart=1
+
+dtoverlay=pi3-miniuart-bt-overlay
