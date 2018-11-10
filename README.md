@@ -12,7 +12,7 @@ Insert the following files into FAT32 format microSD card.
 ```
 # Example of config.txt
 
-# ARMコアをAArch64で起動させる
+# Activate the ARM core on AArch64
 arm_control=0x200
 
 # Enable UART
