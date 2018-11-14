@@ -59,10 +59,20 @@ int mbox_call(unsigned char ch){
     return 0;
 }
 
-unsigned int width, height, pitch, bpp;
-unsigned char *lfb;
+typedef struct _fb_info_t {
+    unsigned int  display_w;  // display width
+    unsigned int  display_h;  // display height
+    unsigned int  w;          // framebuffer width
+    unsigned int  h;          // framebuffer height
+    unsigned int  row_bytes;  // write 0 to get value
+    unsigned int  bpp;        // bits per pixel
+    unsigned int  ofs_x;      // x offset of framebuffer
+    unsigned int  ofs_y;      // y offset of framebuffer
+    unsigned char *buf_addr;  // pointer to framebuffer
+    unsigned int  buf_size;   // framebuffer size in bytes
+} fb_info_t;
 
-void lfb_init(){
+void lfb_init(fb_info_t *fb_info){
     for(int i = 0; i < 36; i++){
         mbox[i] = 0;
     }
@@ -72,64 +82,84 @@ void lfb_init(){
 
     mbox[2] = 0x48003;  //set phy wh
     mbox[3] = 8;
-    mbox[4] = 8;
-    mbox[5] = 1280;     //FrameBufferInfo.width
-    mbox[6] = 800;      //FrameBufferInfo.height
+    mbox[4] = 0;
+    mbox[5] = fb_info->display_w;  //FrameBufferInfo.width
+    mbox[6] = fb_info->display_h;  //FrameBufferInfo.height
 
     mbox[7] = 0x48004;  //set virt wh
     mbox[8] = 8;
-    mbox[9] = 8;
-    mbox[10] = 1280;    //FrameBufferInfo.virtual_width
-    mbox[11] = 800;     //FrameBufferInfo.virtual_height
+    mbox[9] = 0;
+    mbox[10] = fb_info->w;        //FrameBufferInfo.virtual_width
+    mbox[11] = fb_info->h;        //FrameBufferInfo.virtual_height
     
     mbox[12] = 0x48005; //set depth
     mbox[13] = 4;
-    mbox[14] = 4;
-    mbox[15] = 16;      //FrameBufferInfo.depth
+    mbox[14] = 0;
+    mbox[15] = fb_info->bpp;      //FrameBufferInfo.depth
 
     mbox[16] = 0x40008; //get pitch
     mbox[17] = 4;
-    mbox[18] = 4;
+    mbox[18] = 0;
     mbox[19] = 0;       //FrameBufferInfo.pitch
 
     mbox[20] = 0x40001; //get framebuffer, gets alignment on request
     mbox[21] = 8;
-    mbox[22] = 8;
-    mbox[23] = 4096;    //FrameBufferInfo.pointer
+    mbox[22] = 0;
+    mbox[23] = 0;       //FrameBufferInfo.pointer
     mbox[24] = 0;       //FrameBufferInfo.size
 
     mbox[25] = MBOX_TAG_LAST;
 
     if(mbox_call(MBOX_CH_PROP) && mbox[15] == 16 && mbox[23] != 0) {
         mbox[23] &= 0x3FFFFFFF;
-        width  = mbox[5];
-        height = mbox[6];
-        bpp    = mbox[15];
-        pitch  = mbox[19];
-        lfb = (void*)((unsigned long)mbox[23]);
+        fb_info->display_w = mbox[5];
+        fb_info->display_h = mbox[6];
+        fb_info->bpp       = mbox[15];
+        fb_info->row_bytes = mbox[19];
+        fb_info->buf_addr  = (void*)((unsigned long)mbox[23]);
     }
 }
 
-static inline void *coord2ptr(int x, int y) {
-    return (void *) (lfb + (bpp + 7 >> 3) * x + pitch * y);
+static inline void *coord2ptr(unsigned char *vram,
+                              unsigned int pitch,
+                              unsigned int bpp,
+                              int x,
+                              int y) {
+    return (void *)(vram + ((bpp + 7) >> 3) * x + pitch * y);
 }
 
-void hline16(int x, int y, int l, unsigned int c) {
-    unsigned short int *p = (unsigned short int *) coord2ptr(x, y);
-    if (width < l + x) {
-        l = width - x;
+void hline16(unsigned char *vram,
+             unsigned int pitch,
+             unsigned int bpp,
+             int x,
+             int y,
+             unsigned int l,
+             unsigned int w,
+             unsigned int c) {
+    unsigned short int *p = (unsigned short int *) coord2ptr(vram, pitch, bpp, x, y);
+    if (w < l + x) {
+        l = w - x;
     }
-    for(int i = 0; i < l; i++) {
+
+    for(unsigned int i = 0; i < l; i++) {
         *p++ = c;
     }
 }
 
-void vline16(int x, int y, int l, unsigned int c) {
-    unsigned short int *p = (unsigned short int *) coord2ptr(x, y);
-    if (height < l + y) {
-        l = height - y;
+void vline16(unsigned char *vram,
+             unsigned int pitch,
+             unsigned int bpp,
+             int x,
+             int y,
+             unsigned int l,
+             unsigned int h,
+             unsigned int c) {
+    unsigned short int *p = (unsigned short int *) coord2ptr(vram, pitch, bpp, x, y);
+    if (h < l + y) {
+        l = h - y;
     }
-    for(int i = 0; i < l; i++) {
+
+    for(unsigned int i = 0; i < l; i++) {
         *p = c;
         p += pitch >> 1;
     }
@@ -137,14 +167,22 @@ void vline16(int x, int y, int l, unsigned int c) {
 
 int main(void){
     unsigned int i;
+    fb_info_t fb_info = {1280, 800, 1280, 800, 0, 16, 0, 0, 0, 0};
 
-    lfb_init();
+    lfb_init(&fb_info);
+
+    unsigned char *vram  = fb_info.buf_addr;
+    unsigned int  pitch  = fb_info.row_bytes;
+    unsigned int  bpp    = fb_info.bpp;
+    unsigned int  width  = fb_info.display_w;
+    unsigned int  height = fb_info.display_h;
 
     for(i = 0; i < height; i += 8) {
-        hline16(0, i, width, 0x5050 * i);
+        hline16(vram, pitch, bpp, 0, i, width, width, 0x5050 * i);
     }
+
     for(i = 0; i < width; i += 8) {
-        vline16(i, 0, height, 0xa0a0 * i);
+        vline16(vram, pitch, bpp, i, 0, height, height, 0xa0a0 * i);
     }
 
     while(1)
