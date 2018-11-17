@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #define GPFSEL1 0x3F200004
 #define GPSET0  0x3F20001C
 #define GPCLR0  0x3F200028
@@ -8,12 +6,12 @@
 ///
 // Memory Mapped I/O
 
-void mmio_write(intptr_t reg, uint32_t data){
-    *(volatile uint32_t *)reg = data;
+void mmio_write(unsigned int reg, unsigned int data){
+    *(volatile unsigned int *)reg = data;
 }
 
-uint32_t mmio_read(intptr_t reg){
-    return *(volatile uint32_t *)reg;
+unsigned int mmio_read(unsigned int reg){
+    return *(volatile unsigned int *)reg;
 }
 
 ///
