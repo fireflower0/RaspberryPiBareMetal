@@ -15,7 +15,7 @@
 ///
 // Main Function
 
-int main(void){
+void main(void){
     volatile unsigned int i;
 
     // Set the function assigned to the pin to GPIO
@@ -27,6 +27,4 @@ int main(void){
         GPCLR0 = 0x01 << 16;           // GPIO16 Low
         for(i = 0; i < MAX_CNT; i++);  // Sleep
     }
-
-    return 0;
 }
