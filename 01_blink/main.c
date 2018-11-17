@@ -1,18 +1,16 @@
-#define GPFSEL1 0x3F200004
-#define GPSET0  0x3F20001C
-#define GPCLR0  0x3F200028
-#define MAX_CNT 3000000
+// RaspberryPi3 Memory Mapped I/O Base Address
+#define MMIO_BASE 0x3F000000
 
-///
 // Memory Mapped I/O
+#define IOREG(X)  (*(volatile unsigned int *) (X))
 
-void mmio_write(unsigned int reg, unsigned int data){
-    *(volatile unsigned int *)reg = data;
-}
+// GPIO16 control register
+#define GPFSEL1 IOREG(MMIO_BASE + 0x00200004)  // GPIO Function Select
+#define GPSET0  IOREG(MMIO_BASE + 0x0020001C)  // GPIO16 High
+#define GPCLR0  IOREG(MMIO_BASE + 0x00200028)  // GPIO16 Low
 
-unsigned int mmio_read(unsigned int reg){
-    return *(volatile unsigned int *)reg;
-}
+// Sleep count
+#define MAX_CNT 3000000
 
 ///
 // Main Function
@@ -20,13 +18,14 @@ unsigned int mmio_read(unsigned int reg){
 int main(void){
     volatile unsigned int i;
 
-    mmio_write(GPFSEL1, 0x01 << (3 * 6));
+    // Set the function assigned to the pin to GPIO
+    GPFSEL1 = 0x01 << 18;
 
     while(1){
-        mmio_write(GPSET0, 0x01 << 16);
-        for(i = 0; i < MAX_CNT; i++);
-        mmio_write(GPCLR0, 0x01 << 16);
-        for(i = 0; i < MAX_CNT; i++);
+        GPSET0 = 0x01 << 16;           // GPIO16 High
+        for(i = 0; i < MAX_CNT; i++);  // Sleep
+        GPCLR0 = 0x01 << 16;           // GPIO16 Low
+        for(i = 0; i < MAX_CNT; i++);  // Sleep
     }
 
     return 0;
