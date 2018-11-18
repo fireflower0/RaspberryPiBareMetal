@@ -1,26 +1,19 @@
-#include <stdint.h>
+// RaspberryPi3 Memory Mapped I/O Base Address
+#define MMIO_BASE 0x3F000000
 
-#define UARTDR      0x09000000
-#define UARTFR      0x09000018
-#define UARTFR_TXFF (1U << 5)
-
-///
 // Memory Mapped I/O
+#define IOREG(X)  (*(volatile unsigned int *) (X))
 
-void mmio_write(intptr_t reg, uint32_t data){
-    *(volatile uint32_t *)reg = data;
-}
-
-uint32_t mmio_read(intptr_t reg){
-    return *(volatile uint32_t *)reg;
-}
+#define UARTDR      IOREG(0x09000000)
+#define UARTFR      IOREG(0x09000018)
+#define UARTFR_TXFF (1U << 5)
 
 ///
 // UART
 
 void put_char(char ch){
-    while(mmio_read(UARTFR) & UARTFR_TXFF);
-    mmio_write(UARTDR, (uint32_t)ch);
+    while(UARTFR & UARTFR_TXFF);
+    UARTDR = ch;
 }
 
 void put_str(char *str){
@@ -28,10 +21,10 @@ void put_str(char *str){
         put_char(*str++);
 }
 
-void put_hex(uint64_t num){
+void put_hex(unsigned int num){
     int      n    = 0;
-    uint64_t base = 16;
-    uint64_t d    = 1;
+    unsigned int base = 16;
+    unsigned int d    = 1;
     char buf[32], *bf;
 
     bf = buf;
