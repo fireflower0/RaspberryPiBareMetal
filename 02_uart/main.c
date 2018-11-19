@@ -4,15 +4,17 @@
 // Memory Mapped I/O
 #define IOREG(X)  (*(volatile unsigned int *) (X))
 
-#define UARTDR      IOREG(0x09000000)
-#define UARTFR      IOREG(0x09000018)
+#define UARTDR      IOREG(0x3F20100)
+#define UARTFR      IOREG(0x3F20118)
 #define UARTFR_TXFF (1U << 5)
 
 ///
 // UART
 
 void put_char(char ch){
-    while(UARTFR & UARTFR_TXFF);
+    while(UARTFR & UARTFR_TXFF){
+        asm volatile("nop");
+    }
     UARTDR = ch;
 }
 
@@ -22,12 +24,13 @@ void put_str(char *str){
 }
 
 void put_hex(unsigned int num){
-    int      n    = 0;
     unsigned int base = 16;
     unsigned int d    = 1;
     char buf[32], *bf;
 
     bf = buf;
+
+    // 先頭に"0x"を付ける
     *bf++ = '0';
     *bf++ = 'x';
 
@@ -39,14 +42,15 @@ void put_hex(unsigned int num){
         int dgt = num / d;
         num %= d;
         d /= base;
-        if(n || dgt > 0 || d == 0){
+        if(dgt > 0 || d == 0){
             *bf++ = dgt + (dgt < 10 ? '0' : ('A') - 10);
-            ++n;
         }
     }
+
+    // 最後は改行する
     *bf++ = '\r';
     *bf++ = '\n';
-    *bf = 0;
+    *bf   = 0;
 
     put_str(buf);
 }
@@ -56,10 +60,11 @@ void put_hex(unsigned int num){
 
 int main(void){
     put_str("Hello, world!\r\n");
-    put_hex(10);
+    put_hex(2882400018);
 
-    while(1)
-        ;
+    while(1){
+        asm volatile("nop");
+    }
 
     return 0;
 }
