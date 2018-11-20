@@ -27,6 +27,9 @@ _start:
     sub w2, w2, #1
     cbnz w2, 3b
 4:
+    // Qemu専用
+    mov w0, #0x40080000
+    mov wsp, w0
     // C言語プログラムのメイン関数にジャンプ
     bl  main
     // フェイルセーフの場合は、このコアも停止

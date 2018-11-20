@@ -4,8 +4,8 @@
 // Memory Mapped I/O
 #define IOREG(X)  (*(volatile unsigned int *) (X))
 
-#define UARTDR      IOREG(0x3F20100)
-#define UARTFR      IOREG(0x3F20118)
+#define UARTDR      IOREG(0x09000000)
+#define UARTFR      IOREG(0x09000018)
 #define UARTFR_TXFF (1U << 5)
 
 ///
