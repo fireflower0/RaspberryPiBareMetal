@@ -1,60 +1,106 @@
-#include <stdio.h>
-#include <stdint.h>
-#include "mmio.h"
-#include "uart.h"
+// RaspberryPi3 Memory Mapped I/O Base Address
+#define MMIO_BASE 0x3F000000
+
+// Memory Mapped I/O
+#define IOREG(X)  (*(volatile unsigned int *) (X))
 
 // Mail Box
-#define MB_RECV_MAIL   0x3F00B880
-#define MB_RECV_STATUS 0x3F00B898
-#define MB_SEND_MAIL   0x3F00B8A0
-#define MB_SEND_STATUS 0x3F00B8B8
+#define MB_RECV_MAIL   IOREG(MMIO_BASE + 0x0000B880)
+#define MB_RECV_STATUS IOREG(MMIO_BASE + 0x0000B898)
+#define MB_SEND_MAIL   IOREG(MMIO_BASE + 0x0000B8A0)
+#define MB_SEND_STATUS IOREG(MMIO_BASE + 0x0000B8B8)
 
-#define MAIL_FULL  0x80000000
-#define MAIL_EMPTY 0x40000000
+#define MAIL_FULL      0x80000000
+#define MAIL_EMPTY     0x40000000
+
+// UART
+#define MU_IO           IOREG(MMIO_BASE + 0x00215040)
+#define MU_LSR          IOREG(MMIO_BASE + 0x00215054)
+#define MU_LSR_TX_IDLE  (1U << 6)
+#define MU_LSR_TX_EMPTY (1U << 5)
+
+///
+// UART
+
+// 文字
+void put_char(unsigned char ch){
+    // UARTの送信FIFOの状態を確認
+    while (!(MU_LSR & MU_LSR_TX_IDLE) && !(MU_LSR & MU_LSR_TX_EMPTY)){
+        asm volatile("nop");
+    }
+    // UARTの送信FIFOへ1バイト追加
+    MU_IO = ch;
+}
+
+// 文字列
+void put_str(char *str){
+    while(*str != '\0'){
+        put_char(*str++);
+    }
+}
+
+// 16進数
+void put_hex(unsigned long long num){
+    int      n    = 0;
+    unsigned long long base = 16;
+    unsigned long long d    = 1;
+    char buf[32], *bf;
+
+    bf = buf;
+
+    // 先頭に"0x"を付ける
+    *bf++ = '0';
+    *bf++ = 'x';
+
+    while(num / d >= base){
+        d *= base;
+    }
+
+    while(d != 0){
+        int dgt = num / d;
+        num %= d;
+        d /= base;
+        if(n || dgt > 0 || d == 0){
+            *bf++ = dgt + (dgt < 10 ? '0' : ('A') - 10);
+            ++n;
+        }
+    }
+
+    *bf   = 0;
+
+    put_str(buf);
+}
 
 ///
 // Mail Box
 
-void mbox_write(uint8_t channel, intptr_t msg){
-    uint32_t sta;
-
-    put_str("mbox_write: Start!\r\n");
+void mbox_write(unsigned char channel, unsigned int msg){
+    unsigned int sta;
 
     if((msg & 0xFU) == 0){
         do{
-            put_str("mb_send_status: ");
-            sta = mmio_read(MB_SEND_STATUS);
-            put_hex(sta);
+            sta = MB_SEND_STATUS;
         }while((sta & MAIL_FULL) != 0);
 
-        mmio_write(MB_SEND_MAIL, msg | channel);
+        MB_SEND_MAIL = msg | channel;
     }
-
-    put_str("mbox_write: End!\r\n");
 }
 
-uint32_t mbox_read(uint8_t channel){
-    uint32_t data, sta;
-
-    put_str("mbox_read: Start!\r\n");
+unsigned int mbox_read(unsigned char channel){
+    unsigned int data, sta;
 
     do{
         do{
-            put_str("mb_recv_status: ");
-            sta = mmio_read(MB_RECV_STATUS);
-            put_hex(sta);
+            sta = MB_RECV_STATUS;
         }while(sta & MAIL_EMPTY);
-        data = mmio_read(MB_RECV_MAIL);
-        put_hex(data);
+        data = MB_RECV_MAIL;
     }while((data & 0xFU) != channel);
-
-    put_str("mbox_read: End!\r\n");
 
     return data >> 4;
 }
 
 void fb_init() {
-    uint32_t message[] __attribute__((aligned(16))) = {
+    unsigned int message[] __attribute__((aligned(16))) = {
         32,  // The whole buffer is 32 bytes
         0,   // This is a request, so the request/response code is 0
         // This tag requests a 16 byte aligned framebuffer
@@ -64,16 +110,15 @@ void fb_init() {
 
     put_str("fb_init: start!\r\n");
 
-    put_str("Message Address: ");
-    put_hex((intptr_t)message);
+    put_str("*****Write Data*****\r\n");
     for (int i = 0; i < 8; i++){
         put_hex(message[i]);
+        put_str("\r\n");
     }
 
     put_str("Writing Mailbox.\r\n");
 
-    mbox_write(8, (intptr_t)message + 0x40000000);
-    //mbox_write(8, (intptr_t)message);
+    mbox_write(8, (unsigned long long)message + 0x40000000);
 
     put_str("done.\r\n");
 
@@ -83,10 +128,10 @@ void fb_init() {
 
     put_str("done.\r\n");
 
-    put_str("Message Address: ");
-    put_hex((intptr_t)message);
+    put_str("*****RESULT*****\r\n");
     for (int i = 0; i < 8; i++){
         put_hex(message[i]);
+        put_str("\r\n");
     }
 }
 

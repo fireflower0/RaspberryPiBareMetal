@@ -26,12 +26,15 @@ void put_str(char *str){
     }
 }
 
-void put_hex(unsigned int num){
-    unsigned int base = 16;
-    unsigned int d    = 1;
+void put_hex(unsigned long long num){
+    int      n    = 0;
+    unsigned long long base = 16;
+    unsigned long long d    = 1;
     char buf[32], *bf;
 
     bf = buf;
+
+    // 先頭に"0x"を付ける
     *bf++ = '0';
     *bf++ = 'x';
 
@@ -43,18 +46,16 @@ void put_hex(unsigned int num){
         int dgt = num / d;
         num %= d;
         d /= base;
-        if(dgt > 0 || d == 0){
+        if(n || dgt > 0 || d == 0){
             *bf++ = dgt + (dgt < 10 ? '0' : ('A') - 10);
+            ++n;
         }
     }
 
-    *bf++ = '\r';
-    *bf++ = '\n';
     *bf   = 0;
 
     put_str(buf);
 }
-
 
 ///
 // Main Function
@@ -63,6 +64,7 @@ void main(void){
     put_char('A');
     put_str("\r\nHello, world!\r\n");
     put_hex(2882400018);
+    put_str("\r\n");
 
     while (1) {
         asm volatile("nop");
