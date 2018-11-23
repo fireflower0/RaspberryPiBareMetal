@@ -1,15 +1,18 @@
 #define MMIO_BASE       0x3F000000
 
+// Memory Mapped I/O
+#define IOREG(X)  (*(volatile unsigned int *) (X))
+
 /* mailbox message buffer */
 volatile unsigned int  __attribute__((aligned(16))) mbox[36];
 
 #define VIDEOCORE_MBOX  (MMIO_BASE+0x0000B880)
-#define MBOX_READ       ((volatile unsigned int*)(VIDEOCORE_MBOX + 0x00))
-#define MBOX_POLL       ((volatile unsigned int*)(VIDEOCORE_MBOX + 0x10))
-#define MBOX_SENDER     ((volatile unsigned int*)(VIDEOCORE_MBOX + 0x14))
-#define MBOX_STATUS     ((volatile unsigned int*)(VIDEOCORE_MBOX + 0x18))
-#define MBOX_CONFIG     ((volatile unsigned int*)(VIDEOCORE_MBOX + 0x1C))
-#define MBOX_WRITE      ((volatile unsigned int*)(VIDEOCORE_MBOX + 0x20))
+#define MBOX_READ       IOREG(VIDEOCORE_MBOX + 0x00)
+#define MBOX_POLL       IOREG(VIDEOCORE_MBOX + 0x10)
+#define MBOX_SENDER     IOREG(VIDEOCORE_MBOX + 0x14)
+#define MBOX_STATUS     IOREG(VIDEOCORE_MBOX + 0x18)
+#define MBOX_CONFIG     IOREG(VIDEOCORE_MBOX + 0x1C)
+#define MBOX_WRITE      IOREG(VIDEOCORE_MBOX + 0x20)
 
 #define MBOX_RESPONSE   0x80000000
 #define MBOX_FULL       0x80000000
@@ -18,40 +21,33 @@ volatile unsigned int  __attribute__((aligned(16))) mbox[36];
 #define MBOX_REQUEST    0
 
 /* channels */
-#define MBOX_CH_POWER   0
-#define MBOX_CH_FB      1
-#define MBOX_CH_VUART   2
-#define MBOX_CH_VCHIQ   3
-#define MBOX_CH_LEDS    4
-#define MBOX_CH_BTNS    5
-#define MBOX_CH_TOUCH   6
-#define MBOX_CH_COUNT   7
 #define MBOX_CH_PROP    8
 
 /* tags */
-#define MBOX_TAG_SETPOWER       0x28001
-#define MBOX_TAG_SETCLKRATE     0x38002
-#define MBOX_TAG_LAST           0
+#define MBOX_TAG_LAST   0
 
-int mbox_call(unsigned char ch){
+void mbox_write(unsigned char ch){
     unsigned int r = (((unsigned int)((unsigned long)&mbox) & ~0xF) | (ch & 0xF));
 
     /* メールボックスに書き込むまで待つ */
     do{
         asm volatile("nop");
-    }while(*MBOX_STATUS & MBOX_FULL);
+    }while(MBOX_STATUS & MBOX_FULL);
 
     /* メッセージのアドレスをチャネル識別子を持つメールボックスに書き込む */
-    *MBOX_WRITE = r;
+    MBOX_WRITE = r;
+}
 
+int mbox_read(unsigned char ch){
+    unsigned int r = (((unsigned int)((unsigned long)&mbox) & ~0xF) | (ch & 0xF));
     while(1) {
         /* 応答を待つ */
         do{
             asm volatile("nop");
-        }while(*MBOX_STATUS & MBOX_EMPTY);
+        }while(MBOX_STATUS & MBOX_EMPTY);
 
         /* メッセージに対する応答か判定 */
-        if(r == *MBOX_READ){
+        if(r == MBOX_READ){
             /* 有効な成功応答か判定 */
             return mbox[1] == MBOX_RESPONSE;
         }
@@ -110,7 +106,9 @@ void lfb_init(fb_info_t *fb_info){
 
     mbox[25] = MBOX_TAG_LAST;
 
-    if(mbox_call(MBOX_CH_PROP) && mbox[15] == 16 && mbox[23] != 0) {
+    mbox_write(MBOX_CH_PROP);
+
+    if(mbox_read(MBOX_CH_PROP) && mbox[15] == 16 && mbox[23] != 0) {
         mbox[23] &= 0x3FFFFFFF;
         fb_info->display_w = mbox[5];
         fb_info->display_h = mbox[6];
