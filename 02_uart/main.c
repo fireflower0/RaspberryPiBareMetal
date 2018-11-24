@@ -22,14 +22,6 @@ volatile unsigned int __attribute__((aligned(16))) mbox[36];
 #define MBOX_REQUEST    0
 
 /* channels */
-#define MBOX_CH_POWER   0
-#define MBOX_CH_FB      1
-#define MBOX_CH_VUART   2
-#define MBOX_CH_VCHIQ   3
-#define MBOX_CH_LEDS    4
-#define MBOX_CH_BTNS    5
-#define MBOX_CH_TOUCH   6
-#define MBOX_CH_COUNT   7
 #define MBOX_CH_PROP    8
 
 /* tags */
@@ -38,24 +30,24 @@ volatile unsigned int __attribute__((aligned(16))) mbox[36];
 #define MBOX_TAG_LAST           0
 
 // UART
-#define PL011_DR        IOREG(MMIO_BASE+0x00201000)
-#define PL011_FR        IOREG(MMIO_BASE+0x00201018)
-#define PL011_IBRD      IOREG(MMIO_BASE+0x00201024)
-#define PL011_FBRD      IOREG(MMIO_BASE+0x00201028)
-#define PL011_LCRH      IOREG(MMIO_BASE+0x0020102C)
-#define PL011_CR        IOREG(MMIO_BASE+0x00201030)
-#define PL011_IMSC      IOREG(MMIO_BASE+0x00201038)
-#define PL011_ICR       IOREG(MMIO_BASE+0x00201044)
+#define PL011_DR        IOREG(MMIO_BASE + 0x00201000)
+#define PL011_FR        IOREG(MMIO_BASE + 0x00201018)
+#define PL011_IBRD      IOREG(MMIO_BASE + 0x00201024)
+#define PL011_FBRD      IOREG(MMIO_BASE + 0x00201028)
+#define PL011_LCRH      IOREG(MMIO_BASE + 0x0020102C)
+#define PL011_CR        IOREG(MMIO_BASE + 0x00201030)
+#define PL011_IMSC      IOREG(MMIO_BASE + 0x00201038)
+#define PL011_ICR       IOREG(MMIO_BASE + 0x00201044)
 
 // GPIO
-#define GPFSEL1         IOREG(MMIO_BASE+0x00200004)
-#define GPPUD           IOREG(MMIO_BASE+0x00200094)
-#define GPPUDCLK0       IOREG(MMIO_BASE+0x00200098)
+#define GPFSEL1         IOREG(MMIO_BASE + 0x00200004)
+#define GPPUD           IOREG(MMIO_BASE + 0x00200094)
+#define GPPUDCLK0       IOREG(MMIO_BASE + 0x00200098)
 
 ///
 // Mailbox
 
-int mbox_call(unsigned char ch){
+void mbox_write(unsigned char ch){
     unsigned int r = (((unsigned int)((unsigned long)&mbox) & ~0xF) | (ch & 0xF));
 
     /* メールボックスに書き込むまで待つ */
@@ -65,7 +57,10 @@ int mbox_call(unsigned char ch){
 
     /* メッセージのアドレスをチャネル識別子を持つメールボックスに書き込む */
     MBOX_WRITE = r;
+}
 
+int mbox_read(unsigned char ch){
+    unsigned int r = (((unsigned int)((unsigned long)&mbox) & ~0xF) | (ch & 0xF));
     while(1) {
         /* 応答を待つ */
         do{
@@ -101,7 +96,8 @@ void uart_init(){
     mbox[7] = 0;           // clear turbo
     mbox[8] = MBOX_TAG_LAST;
 
-    mbox_call(MBOX_CH_PROP);
+    mbox_write(MBOX_CH_PROP);
+    mbox_read(MBOX_CH_PROP);
 
     /* map UART0 to GPIO pins */
     r = GPFSEL1;
@@ -123,14 +119,14 @@ void uart_init(){
     PL011_ICR  = 0x7FF;     // clear interrupts
     PL011_IBRD = 2;         // 115200 baud
     PL011_FBRD = 0xB;
-    PL011_LCRH = 0b11<<5;   // 8n1
+    PL011_LCRH = 0b11 << 5; // 8n1
     PL011_CR   = 0x301;     // enable Tx, Rx, FIFO
 }
 
 void put_char(char ch){
     do{
         asm volatile("nop");
-    }while(PL011_FR & 0x10);
+    }while(PL011_FR & 0x20);
     PL011_DR = ch;
 }
 
@@ -163,36 +159,9 @@ void put_hex(unsigned int num){
         }
     }
 
-    // 最後は改行する
-    *bf++ = '\r';
-    *bf++ = '\n';
     *bf   = 0;
 
     put_str(buf);
-}
-
-void get_serial_number(){
-    // get the board's unique serial number with a mailbox call
-    mbox[0] = 8 * 4;                // length of the message
-    mbox[1] = MBOX_REQUEST;         // this is a request message
-    
-    mbox[2] = MBOX_TAG_GETSERIAL;   // get serial number command
-    mbox[3] = 8;                    // buffer size
-    mbox[4] = 8;
-    mbox[5] = 0;                    // clear output buffer
-    mbox[6] = 0;
-
-    mbox[7] = MBOX_TAG_LAST;
-
-    // send the message to the GPU and receive answer
-    if (mbox_call(MBOX_CH_PROP)) {
-        put_str("My serial number is: ");
-        put_hex(mbox[6]);
-        put_hex(mbox[5]);
-        put_str("\r\n");
-    } else {
-        put_str("Unable to query serial!\r\n");
-    }
 }
 
 ///
@@ -201,7 +170,10 @@ void get_serial_number(){
 int main(void){
     uart_init();
 
-    get_serial_number();
+    put_char('A');
+    put_str("\r\nHello, world!\r\n");
+    put_hex(2882400018);
+    put_str("\r\n");
 
     while(1){
         asm volatile("nop");
