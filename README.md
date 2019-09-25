@@ -31,5 +31,11 @@ Linaro's GCC for AArch 64 Bare-Metal
 * qemu-system-aarch64
 
 ```
-qemu-system-aarch64 -m 128 -M raspi3 -kernel kernel8.img 
+qemu-system-aarch64 -m 128 -M raspi3 -kernel kernel8.img
+```
+
+or 
+
+```
+qemu-system-aarch64 -m 128 -M raspi3 -kernel kernel8.img -serial stdio
 ```
