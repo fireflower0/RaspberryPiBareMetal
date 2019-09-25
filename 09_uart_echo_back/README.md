@@ -8,10 +8,9 @@
   * Command "Ctrl + Alt + 2"
 
 ```
-qemu-system-aarch64 -cpu cortex-a57 -M virt -kernel kernel8.img
+qemu-system-aarch64 -cpu cortex-a57 -M virt -kernel kernel8.img -serial stdio
 ```
 
 ## Demo
 
-![qemu_uart](https://github.com/fireflower0/RaspberryPiBareMetal/blob/master/02_uart/img/qemu_uart.png)
-
+![qemu_uart_echoback](https://github.com/fireflower0/RaspberryPiBareMetal/blob/master/09_uart_echo_back/img/echoback.png)
