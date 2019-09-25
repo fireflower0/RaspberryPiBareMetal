@@ -179,9 +179,7 @@ int main(void){
 
     uart_init();
 
-    put_char('A');
-    put_str("\r\nHello, world!\r\n");
-    put_hex(2882400018);
+    put_str("\r\nStart!!\r\n");
     put_str("\r\n");
 
     while(1){
