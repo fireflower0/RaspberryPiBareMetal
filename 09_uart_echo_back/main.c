@@ -180,14 +180,10 @@ int main(void){
     uart_init();
 
     put_str("\r\nStart!!\r\n");
-    put_str("\r\n");
 
     while(1){
-        //asm volatile("nop");
         put_str(">> ");
         ch = read_char();
-        put_char(ch);
-        put_str("\r\n");
         put_char(ch);
         put_str("\r\n");
     }
