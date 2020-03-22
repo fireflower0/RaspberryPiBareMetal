@@ -8,6 +8,11 @@ AS      = $(PREFIX)as
 LD      = $(PREFIX)ld
 OBJCOPY = $(PREFIX)objcopy
 
+QEMU         = qemu-system-aarch64
+MEMORY       = 128
+MACHINE_TYPE = raspi3
+DEV          = stdio # "vc" in graphical mode and "stdio" in non graphical mode.
+
 CFLAGS  = -fno-stack-protector -c -Wall -Wextra
 
 OBJS   = boot.o main.o mmio.o uart.o mailbox.o
@@ -27,6 +32,9 @@ $(TARGET_ELF): $(OBJS)
 
 %.o: %.c
 	$(GCC) $(CFLAGS) -o $@ $<
+
+qemu:
+	$(QEMU) -m $(MEMORY) -M $(MACHINE_TYPE) -kernel $(TARGET_IMG) -serial $(DEV)
 
 clean:
 	$(RM) *~ *.o *.elf *.img *.map
